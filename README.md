@@ -1,5 +1,7 @@
 # Agentic LinkedIn Post Optimizer (LangGraph + FastAPI)
 
+![Architecture](docs/Architecture_Image.png)
+
 This project demonstrates how to turn **manual prompt iteration** into a **deterministic, agentic workflow** using LangGraph and FastAPI.
 
 Instead of repeatedly prompting an LLM to rewrite content, the system:
@@ -28,8 +30,6 @@ The goal is not “better prompts”, but **better loops**.
 ---
 
 ## Repository Structure
-
-![Architecture](docs/Architecture_Image.png)
 
 ```text
 agentic-linkedin-post-optimizer/
