@@ -5,11 +5,9 @@ from prompts.evaluator import evaluate_linkedin_post
 from prompts.optimizer import optimize_linkedin_post
 
 def should_continue(state: LinkedInPostState):
-    if state["review_decision"] == "accept":
+    if state["review_decision"] == "accept" and state["quality_score"] >= 42:
         return END
     if state["iteration_count"] >= state["max_iterations"]:
-        return END
-    if state["quality_score"] >= 42:
         return END
     return "optimize_linkedin_post"
 
