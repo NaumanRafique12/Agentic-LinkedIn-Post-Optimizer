@@ -201,7 +201,7 @@ docker run -p 8000:8000 \
   -e OPENAI_API_KEY=sk-xxxx \
   agentic-linkedin-post-optimizer
 ```
-## FASTAPI
+## FASTAPI EndPoint
 ![Architecture](docs/s1.png)
 
 ## ExampleOutput
