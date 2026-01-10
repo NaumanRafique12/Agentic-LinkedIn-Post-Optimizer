@@ -3,3 +3,4 @@ langgraph == 1.0.5
 langchain-openai
 fastapi
 uvicorn
+python-dotenv
