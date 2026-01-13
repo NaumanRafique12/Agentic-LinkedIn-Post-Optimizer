@@ -2,14 +2,11 @@
 
 ![Architecture](docs/Architecture_Image.png)
 
-This project demonstrates how to turn **manual prompt iteration** into a **deterministic, agentic workflow** using LangGraph and FastAPI.
+This project demonstrates how to turn manual prompt iteration into a deterministic, agentic workflow using LangGraph and FastAPI.
 
-Instead of repeatedly prompting an LLM to rewrite content, the system:
-1. Generates a LinkedIn post
-2. Evaluates it using strict, structured criteria
-3. Iteratively refines it until it meets a quality threshold or hits a max iteration limit
+Instead of repeatedly prompting an LLM to rewrite content, the system models writing as a controlled loop with explicit agent roles, clear stopping conditions, and inspectable state.
 
-The focus is **systems and control flow**, not prompt hacking.
+The focus is systems and control flow, not prompt hacking.
 
 ---
 
@@ -17,16 +14,41 @@ The focus is **systems and control flow**, not prompt hacking.
 
 Most AI content workflows look like this:
 
-> Prompt → Rewrite → Rewrite → Rewrite → Accept something mediocre
+Prompt → Rewrite → Rewrite → Rewrite → Accept something mediocre
 
-This repository shows how to replace that loop with:
-- Explicit agent roles
-- Code-enforced acceptance logic
-- Transparent iteration history
-- Repeatable, inspectable behavior
+
+This repository shows how to replace that pattern with:
+
+1) Explicit agent roles (writer, editor, line editor)
+
+2) Code-enforced acceptance logic
+
+3) Intent-aware generation rules
+
+4) Style as a presentation layer (not a truth layer)
+
+5) Transparent iteration history
+
+6) Repeatable, inspectable behavior
+
 
 The goal is not “better prompts”, but **better loops**.
 
+What This System Does
+
+At a high level, the system:
+
+1) Classifies intent (Proof of Work vs Tech Thought Leadership)
+
+2) Generates a draft using intent-specific rules
+
+3) Evaluates quality using strict, structured criteria
+
+4) Refines the draft based on evaluator feedback
+
+5) Stops deterministically when quality or iteration limits are reached
+
+Acceptance is enforced in code, not by the model.
 ---
 
 ## Repository Structure
@@ -35,27 +57,29 @@ The goal is not “better prompts”, but **better loops**.
 agentic-linkedin-post-optimizer/
 │
 ├── app/
-│ ├── init.py
-│ └── main.py # FastAPI entrypoint
+│   ├── __init__.py
+│   └── main.py          # FastAPI entrypoint
 │
 ├── graph/
-│ ├── init.py
-│ ├── state.py # Typed agent state
-│ └── workflow.py # LangGraph control flow
+│   ├── __init__.py
+│   ├── state.py         # Typed agent state
+│   └── workflow.py     # LangGraph control flow
 │
 ├── prompts/
-│ ├── init.py
-│ ├── generator.py # Post generation agent
-│ ├── evaluator.py # Structured evaluation agent
-│ └── optimizer.py # Iterative refinement agent
+│   ├── __init__.py
+│   ├── intent_classifier.py
+│   ├── generator.py    # Writer agent
+│   ├── evaluator.py    # Editor agent
+│   └── optimizer.py    # Line editor agent
 │
 ├── models/
-│ ├── init.py
-│ └── llm_config.py # Model + temperature configuration
+│   ├── __init__.py
+│   └── llm_config.py   # Model + temperature configuration
 │
 ├── Dockerfile
 ├── requirements.txt
 ├── .dockerignore
+
 ```
 
 ---
@@ -66,25 +90,131 @@ agentic-linkedin-post-optimizer/
 
 ### Flow Overview
 
-1. **Generator Agent**
-   - Produces an initial LinkedIn post from a topic
-   - Enforces structure: opening line + numbered points
+User Input
+   ↓
+Intent Classifier
+   ↓
+Communication Style Selection
+   ↓
+Generator (Writer)
+   ↓
+Evaluator (Editor)
+   ↓
+Optimizer (Line Editor)
+   ↓
+Code-Enforced Stop Logic
+   ↓
+Final LinkedIn Post
 
-2. **Evaluator Agent**
-   - Scores the post on structure, density, and engineering credibility
-   - Returns structured feedback (JSON)
-   - Does **not** decide acceptance
 
-3. **Optimizer Agent**
-   - Refines the post using evaluator feedback
-   - Increases information density without bloating length
+**Agent Roles (Explicit by Design)**
 
-4. **LangGraph Control Logic**
-   - Loops until:
-     - Quality score ≥ threshold, or
-     - Max iterations reached
-   - Prevents infinite loops
-   - Keeps state explicit and inspectable
+**Generator Agent (Writer)**
+
+Responsibilities:
+
+1) Drafts the initial LinkedIn post
+
+2) Applies intent-specific rules
+
+3) Produces claim-driven content (not format-driven)
+
+**Intent Behavior**
+
+**Proof of Work**
+
+1) Uses only user-provided facts and metrics
+
+2) No invented mechanisms or numbers
+
+3) Allows bounded interpretation (what mattered, what drove results)
+
+4) No forced bullets or point counts
+
+**Tech Thought Leadership**
+
+1) Opinionated, production-grounded reasoning
+
+2) No metrics
+
+3) Structured explanations allowed
+
+**Communication Style (Presentation Only)**
+
+1) ENGINEERING_DIRECT — concise, factual
+
+2) VIRAL_ENGINEER — scroll-stopping, senior POV
+
+3) STORY_DRIVEN — narrative arc, still factual
+
+Style controls how things are said, not what is allowed.
+
+**Evaluator Agent (Editor)**
+
+**Most critical component in the system.**
+
+**Responsibilities**
+
+1) Scores the draft across multiple dimensions
+
+2) Returns structured feedback (JSON)
+
+3) Does not decide acceptance
+
+4) Is intentionally skeptical and hard to impress
+
+**Scoring Dimensions**
+
+1) Hook strength
+
+2) Factual grounding
+
+3) Cause → effect clarity
+
+4) Interpretive judgment
+
+5) Information density
+
+**The evaluator never sees acceptance thresholds.**
+**Stopping logic is enforced strictly in code.**
+
+**Optimizer Agent (Line Editor)**
+
+**Responsibilities**
+
+1) Refines the draft using evaluator feedback
+
+2) Increases clarity and density
+
+3) Removes redundancy and abstraction
+
+4) Preserves all factual constraints
+
+**The optimizer is allowed to:**
+
+1) Merge or remove weak claims
+
+2) Reformat structure if it improves clarity
+
+3) Strengthen interpretation without adding facts
+
+**LangGraph Control Logic**
+
+**The LangGraph workflow:**
+
+1) Makes state explicit and typed
+
+2) Prevents infinite loops
+
+3) Tracks iteration history
+
+4) Enforces stopping conditions in code
+
+**The loop terminates when:**
+
+1) Quality score ≥ threshold, or
+
+2) Maximum iteration count is reached
 
 5. **FastAPI Layer**
    - `/optimize` → JSON response (includes history)
@@ -92,89 +222,88 @@ agentic-linkedin-post-optimizer/
 
 ---
 
-## Model Configuration & Rationale
+**Model Configuration & Rationale**
 
-This project intentionally uses **different LLMs for different agent roles**.  
+This project intentionally uses different LLMs for different agent roles.
 Each agent has a distinct responsibility, and model choice is aligned to that responsibility.
 
-The goal is **consistency, control, and cost-awareness**, not using a single model everywhere.
+The goal is consistency, control, and cost-awareness, not using a single model everywhere.
 
----
+**Generator Agent**
 
-### Generator Agent
+**Model: gpt-4.1**
+**Temperature: 0.6**
 
-**Model:** `gpt-4.1`  
-**Temperature:** `0.6`
+Why this model?
 
-**Why this model?**
-- Produces realistic, experience-driven engineering narratives
-- Handles strict structural constraints (opening line + numbered points)
-- Balances creativity with technical grounding
+1) Produces realistic, experience-driven engineering narratives
 
-The generator’s job is to **draft** content that feels like it was written by a senior engineer, not to be perfect.
+2) Strong at senior-level framing and bounded interpretation
 
----
+3) Balances creativity with technical grounding
 
-### Evaluator Agent (Most Critical)
+The generator’s job is to draft content that feels like it was written by a senior engineer, not to be perfect.
 
-**Model:** `gpt-4.1`  
-**Temperature:** `0.0`
+**Evaluator Agent (Most Critical)**
 
-**Why this model?**
-- Highly consistent judgment across iterations
-- Strong at structural validation and quality assessment
-- Minimizes scoring drift and contradictory feedback
+**Model: gpt-4.1-mini**
+**Temperature: 0.0**
 
-The evaluator **does not decide acceptance**.  
+Why this model?
+
+1) Less impressed by fluent prose, more literal and skeptical
+
+2) Highly consistent judgment across iterations
+
+3) Strong at identifying abstraction, redundancy, and weak claims
+
+The evaluator does not decide acceptance.
 It only scores and critiques — final acceptance is enforced in code.
 
 This separation is intentional and mirrors real production systems.
 
----
+**Optimizer Agent**
 
-### Optimizer Agent
+**Model: gpt-4o-mini**
+**Temperature: 0.2–0.3**
 
-**Model:** `gpt-4.1-mini`  
-**Temperature:** `0.3`
+Why this model?
 
-**Why this model?**
-- Excellent at constrained rewriting and refinement
-- Less prone to hallucinating new ideas
-- Significantly cheaper than full-size models
+1) Excellent at constrained rewriting and refinement
 
-The optimizer improves **density, clarity, and precision** without altering intent or structure.
+2) Low tendency to hallucinate new ideas or facts
 
----
+3) Significantly cheaper than full-size models
 
-### Why Not Use One Model Everywhere?
+The optimizer improves density, clarity, and precision without altering intent or factual constraints.
+
+**Why Not Use One Model Everywhere?**
 
 Using a single model for all agents often leads to:
-- Inconsistent evaluation
-- Over-optimization
-- Higher costs
-- Poor debuggability
+
+1) Self-agreeing evaluation loops
+
+2) Inflated early scores
+
+3) Over-optimization or cosmetic rewrites
+
+4) Poor debuggability and unclear failure modes
 
 By specializing models per role, the system achieves:
-- More stable convergence
-- Lower overall cost
-- Clearer failure modes
-- Better alignment with agent responsibilities
 
----
+1) More stable convergence
 
-### Summary Table
+2) Clear separation of responsibilities
 
-| Agent Role | Model | Temperature | Purpose |
-|----------|------|------------|--------|
-| Generator | `gpt-4.1` | 0.6 | Create structured, realistic drafts |
-| Evaluator | `gpt-4.1` | 0.0 | Strict, consistent scoring & feedback |
-| Optimizer | `gpt-4.1-mini` | 0.3 | Precise refinement under constraints |
+3) Lower overall cost
 
----
+4) Meaningful iteration gradients
 
-**Key Principle:**
-> LLMs generate content and opinions.  
-> Code enforces control, stopping conditions, and acceptance.
+Summary Table
+Agent Role	Model	Temperature	Purpose
+Generator	gpt-4.1	0.6	Draft realistic, senior-engineer content
+Evaluator	gpt-4.1-mini	0.0	Strict, skeptical scoring & critique
+Optimizer	gpt-4o-mini	0.2–0.3	Precise refinement under constraints
 
 ## How to Run the Project
 
