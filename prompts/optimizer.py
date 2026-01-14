@@ -29,11 +29,16 @@ def optimize_linkedin_post(state: LinkedInPostState) -> LinkedInPostState:
         else PROOF_OF_WORK_SYSTEM
     )
 
+    focus_factors = state.get("focus_factors", [])
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content=f"""
-Revise the post below.
+Revise the post below using the evaluator feedback.
+
+Primary focus areas (highest priority):
+{focus_factors}
 
 Feedback:
 {state["review_feedback"]}
@@ -43,13 +48,14 @@ Draft:
 {state["draft_post"]}
 \"\"\"
 
-GOAL:
-- Increase density
-- Remove filler
-- Strengthen senior POV
-- Preserve factual integrity
+INSTRUCTIONS:
+- Prioritize improvements ONLY in the focus areas listed above.
+- Do not attempt to improve unrelated dimensions.
+- Increase density by tightening language, not by adding content.
+- Remove filler, vague phrasing, and abstraction.
+- Preserve factual integrity and intent.
 
-Return LinkedIn-ready text.
+Return LinkedIn-ready text only.
 """
         ),
     ]

@@ -19,8 +19,7 @@ class LinkedInPostReview(BaseModel):
 
 
 structured_evaluator = evaluator_llm.with_structured_output(
-    LinkedInPostReview
-)
+    LinkedInPostReview)
 
 
 def evaluate_linkedin_post(state: LinkedInPostState) -> LinkedInPostState:
@@ -82,11 +81,12 @@ Return ONLY the structured scores and feedback.
     }
 
     focus_factors = sorted(scores, key=scores.get)[:2]
-
+    
     return {
         "review_decision": "accept" if response.total_score >= 42 else "revise",
         "review_feedback": response.review_feedback,
+        "review_feedback_history": [response.review_feedback],
         "quality_score": response.total_score,
         "focus_factors": focus_factors,
-        "history": state.get("history", []),
+        "history": state.get("history", [])
     }

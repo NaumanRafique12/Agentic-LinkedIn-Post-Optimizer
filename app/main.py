@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from fastapi.responses import PlainTextResponse
-from typing import Dict, Any, Literal
-
+from typing import Dict, Any, Literal, Optional
 from graph.workflow import linkedin_post_workflow
 
 
@@ -27,7 +26,7 @@ class PostRequest(BaseModel):
         "VIRAL_ENGINEER",
         "STORY_DRIVEN",
     ] = Field(
-        "ENGINEERING_DIRECT",
+        "VIRAL_ENGINEER",
         description="Controls how the post is framed, not what facts are allowed",
     )
 
@@ -37,6 +36,9 @@ class PostResponse(BaseModel):
     iterations_used: int
     final_score: int
     review_decision: str
+
+    # NEW: surfaced for transparency
+    change_summary: Optional[str]
 
 
 # ---------- STATE INITIALIZATION ----------
@@ -63,8 +65,10 @@ def build_initial_state(request: PostRequest) -> Dict[str, Any]:
         "review_feedback": "",
         "quality_score": 0,
 
-        # Diagnostics
+        # Iteration diagnostics
         "history": [],
+        "review_feedback_history": [],
+        "change_summary": None,
     }
 
 
@@ -74,8 +78,7 @@ def build_initial_state(request: PostRequest) -> Dict[str, Any]:
 def optimize_linkedin_post(request: PostRequest):
     """
     Runs the full agentic loop:
-    Intent classification → (optional references) →
-    Generate → Evaluate → Optimize (until stop condition)
+    Intent → References → Generate → Evaluate → Optimize → Summarize
     """
 
     initial_state = build_initial_state(request)
@@ -86,6 +89,7 @@ def optimize_linkedin_post(request: PostRequest):
         "iterations_used": final_state["iteration_count"],
         "final_score": final_state.get("quality_score", 0),
         "review_decision": final_state.get("review_decision", "unknown"),
+        "change_summary": final_state.get("change_summary")
     }
 
 

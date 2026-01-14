@@ -23,3 +23,9 @@ optimizer_llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.2,
 )
+
+# NEW: Change Summary / Iteration Diff LLM
+change_summary_llm = ChatOpenAI(
+    model="gpt-4.1-mini",
+    temperature=0.0,
+)
