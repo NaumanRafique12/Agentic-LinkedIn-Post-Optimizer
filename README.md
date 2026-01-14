@@ -68,6 +68,7 @@ agentic-linkedin-post-optimizer/
 ├── prompts/
 │   ├── __init__.py
 │   ├── intent_classifier.py
+|   ├── summarizer.py
 │   ├── generator.py    # Writer agent
 │   ├── evaluator.py    # Editor agent
 │   └── optimizer.py    # Line editor agent
