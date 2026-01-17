@@ -57,7 +57,7 @@ Acceptance is enforced in code, not by the model.
 ---
 
 ## Repository Structure
-
+```text
 agentic-linkedin-post-optimizer/
 │
 ├── app/
@@ -79,7 +79,7 @@ agentic-linkedin-post-optimizer/
 │
 ├── Dockerfile
 ├── requirements.txt
-
+```
 ---
 
 ## High-Level Architecture
