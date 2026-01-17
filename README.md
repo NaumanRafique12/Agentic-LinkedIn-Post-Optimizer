@@ -8,329 +8,295 @@ Instead of repeatedly prompting an LLM to rewrite content, the system models wri
 
 The focus is systems and control flow, not prompt hacking.
 
+# Agentic LinkedIn Post Optimizer
+
+This repository demonstrates how to replace prompt–rewrite loops with a deterministic, inspectable agentic system for generating and refining LinkedIn posts.
+
+The goal is not better prompts — it is better control loops.
+
 ---
 
-## Why this project exists
+## Why This Project Exists
 
-Most AI content workflows look like this:
+Most AI writing workflows look like this:
 
 Prompt → Rewrite → Rewrite → Rewrite → Accept something mediocre
 
+This project replaces that pattern by moving iteration control into code, not prompts. Writing, evaluation, optimization, stopping, rollback, and summarization are handled by explicit agent roles governed by deterministic rules.
 
-This repository shows how to replace that pattern with:
+The result is repeatable behavior, predictable convergence, and clear failure modes.
 
-1) Explicit agent roles (writer, editor, line editor)
+---
 
-2) Code-enforced acceptance logic
-
-3) Intent-aware generation rules
-
-4) Style as a presentation layer (not a truth layer)
-
-5) Transparent iteration history
-
-6) Repeatable, inspectable behavior
-
-
-The goal is not “better prompts”, but **better loops**.
-
-What This System Does
+## What This System Does
 
 At a high level, the system:
 
-1) Classifies intent (Proof of Work vs Tech Thought Leadership)
-
-2) Generates a draft using intent-specific rules
-
-3) Evaluates quality using strict, structured criteria
-
-4) Refines the draft based on evaluator feedback
-
-5) Stops deterministically when quality or iteration limits are reached
+1. Classifies intent (Proof of Work vs Tech Thought Leadership)
+2. Grounds generation using intent-aware reference patterns
+3. Generates an initial draft using strict intent rules
+4. Evaluates the draft using structured, deterministic scoring
+5. Optimizes only the weakest dimensions under hard constraints
+6. Stops or rolls back based on code-enforced logic
+7. Always returns the best iteration, never the last explored one
 
 Acceptance is enforced in code, not by the model.
+
+---
+
+## Core Properties
+
+- Explicit agent roles (writer, evaluator, optimizer, summarizer)
+- Intent-aware generation constraints
+- Style treated as presentation, not truth
+- Frozen focus-factor optimization
+- Regression guards and rollback
+- Best-iteration guarantee
+- Full iteration observability via LangSmith
+
 ---
 
 ## Repository Structure
 
-```text
 agentic-linkedin-post-optimizer/
 │
 ├── app/
-│   ├── __init__.py
-│   └── main.py          # FastAPI entrypoint
+│   └── main.py              # FastAPI entrypoint
 │
 ├── graph/
-│   ├── __init__.py
-│   ├── state.py         # Typed agent state
-│   └── workflow.py     # LangGraph control flow
+│   ├── state.py             # Typed agent state + best-iteration tracking
+│   └── workflow.py          # LangGraph control flow & stop logic
 │
 ├── prompts/
-│   ├── __init__.py
 │   ├── intent_classifier.py
-|   ├── summarizer.py
-│   ├── generator.py    # Writer agent
-│   ├── evaluator.py    # Editor agent
-│   └── optimizer.py    # Line editor agent
+│   ├── generator.py         # Writer agent
+│   ├── evaluator.py         # Editor agent (strict scoring)
+│   ├── optimizer.py         # Line editor agent
+│   └── summarize_changes.py # Best-iteration-aware summarizer
 │
 ├── models/
-│   ├── __init__.py
-│   └── llm_config.py   # Model + temperature configuration
+│   └── llm_config.py        # Model & temperature configuration
 │
 ├── Dockerfile
 ├── requirements.txt
-├── .dockerignore
-
-```
 
 ---
 
 ## High-Level Architecture
 
-
-
-### Flow Overview
-
 User Input
-   ↓
+↓
 Intent Classifier
-   ↓
-Communication Style Selection
-   ↓
+↓
+Reference Grounding (intent-aware)
+↓
 Generator (Writer)
-   ↓
+↓
 Evaluator (Editor)
-   ↓
+↓
 Optimizer (Line Editor)
-   ↓
-Code-Enforced Stop Logic
-   ↓
+↓
+Code-Enforced Stop / Rollback Logic
+↓
+Summarizer (best iteration only)
+↓
 Final LinkedIn Post
 
+---
 
-**Agent Roles (Explicit by Design)**
+## Agent Roles
 
-**Generator Agent (Writer)**
+### Generator Agent (Writer)
 
 Responsibilities:
+- Drafts the initial LinkedIn post
+- Applies intent-specific rules
+- Produces claim-driven content (not format-driven)
 
-1) Drafts the initial LinkedIn post
+Proof of Work rules:
+- Uses only user-provided facts and metrics
+- No invented mechanisms, tools, or numbers
+- Allows bounded interpretation
+- No forced bullets or point counts
 
-2) Applies intent-specific rules
-
-3) Produces claim-driven content (not format-driven)
-
-**Intent Behavior**
-
-**Proof of Work**
-
-1) Uses only user-provided facts and metrics
-
-2) No invented mechanisms or numbers
-
-3) Allows bounded interpretation (what mattered, what drove results)
-
-4) No forced bullets or point counts
-
-**Tech Thought Leadership**
-
-1) Opinionated, production-grounded reasoning
-
-2) No metrics
-
-3) Structured explanations allowed
-
-**Communication Style (Presentation Only)**
-
-1) ENGINEERING_DIRECT — concise, factual
-
-2) VIRAL_ENGINEER — scroll-stopping, senior POV
-
-3) STORY_DRIVEN — narrative arc, still factual
-
-Style controls how things are said, not what is allowed.
-
-**Evaluator Agent (Editor)**
-
-**Most critical component in the system.**
-
-**Responsibilities**
-
-1) Scores the draft across multiple dimensions
-
-2) Returns structured feedback (JSON)
-
-3) Does not decide acceptance
-
-4) Is intentionally skeptical and hard to impress
-
-**Scoring Dimensions**
-
-1) Hook strength
-
-2) Factual grounding
-
-3) Cause → effect clarity
-
-4) Interpretive judgment
-
-5) Information density
-
-**The evaluator never sees acceptance thresholds.**
-**Stopping logic is enforced strictly in code.**
-
-**Optimizer Agent (Line Editor)**
-
-**Responsibilities**
-
-1) Refines the draft using evaluator feedback
-
-2) Increases clarity and density
-
-3) Removes redundancy and abstraction
-
-4) Preserves all factual constraints
-
-**The optimizer is allowed to:**
-
-1) Merge or remove weak claims
-
-2) Reformat structure if it improves clarity
-
-3) Strengthen interpretation without adding facts
-
-**LangGraph Control Logic**
-
-**The LangGraph workflow:**
-
-1) Makes state explicit and typed
-
-2) Prevents infinite loops
-
-3) Tracks iteration history
-
-4) Enforces stopping conditions in code
-
-**The loop terminates when:**
-
-1) Quality score ≥ threshold, or
-
-2) Maximum iteration count is reached
-
-5. **FastAPI Layer**
-   - `/optimize` → JSON response (includes history)
-   - `/optimize/text` → Plain text, LinkedIn-ready output
+Tech Thought Leadership rules:
+- Opinionated, production-grounded reasoning
+- No metrics or numbers
+- Structured explanations allowed
 
 ---
 
-**Model Configuration & Rationale**
+### Communication Style (Presentation Layer)
 
-This project intentionally uses different LLMs for different agent roles.
-Each agent has a distinct responsibility, and model choice is aligned to that responsibility.
+Style controls how content is written, not what is allowed.
 
-The goal is consistency, control, and cost-awareness, not using a single model everywhere.
+- ENGINEERING_DIRECT — concise, factual
+- VIRAL_ENGINEER — scroll-stopping, senior POV
+- STORY_DRIVEN — narrative arc, still factual
 
-**Generator Agent**
-
-**Model: gpt-4.1**
-**Temperature: 0.6**
-
-Why this model?
-
-1) Produces realistic, experience-driven engineering narratives
-
-2) Strong at senior-level framing and bounded interpretation
-
-3) Balances creativity with technical grounding
-
-The generator’s job is to draft content that feels like it was written by a senior engineer, not to be perfect.
-
-**Evaluator Agent (Most Critical)**
-
-**Model: gpt-4.1-mini**
-**Temperature: 0.0**
-
-Why this model?
-
-1) Less impressed by fluent prose, more literal and skeptical
-
-2) Highly consistent judgment across iterations
-
-3) Strong at identifying abstraction, redundancy, and weak claims
-
-The evaluator does not decide acceptance.
-It only scores and critiques — final acceptance is enforced in code.
-
-This separation is intentional and mirrors real production systems.
-
-**Optimizer Agent**
-
-**Model: gpt-4o-mini**
-**Temperature: 0.2–0.3**
-
-Why this model?
-
-1) Excellent at constrained rewriting and refinement
-
-2) Low tendency to hallucinate new ideas or facts
-
-3) Significantly cheaper than full-size models
-
-The optimizer improves density, clarity, and precision without altering intent or factual constraints.
-
-**Why Not Use One Model Everywhere?**
-
-Using a single model for all agents often leads to:
-
-1) Self-agreeing evaluation loops
-
-2) Inflated early scores
-
-3) Over-optimization or cosmetic rewrites
-
-4) Poor debuggability and unclear failure modes
-
-By specializing models per role, the system achieves:
-
-1) More stable convergence
-
-2) Clear separation of responsibilities
-
-3) Lower overall cost
-
-4) Meaningful iteration gradients
-
-Summary Table
-Agent Role	Model	Temperature	Purpose
-Generator	gpt-4.1	0.6	Draft realistic, senior-engineer content
-Evaluator	gpt-4.1-mini	0.0	Strict, skeptical scoring & critique
-Optimizer	gpt-4o-mini	0.2–0.3	Precise refinement under constraints
-
-## How to Run the Project
-
-You can run this project **locally** or using **Docker**.  
-Both approaches expose the same FastAPI endpoints.
+Truth constraints always dominate style.
 
 ---
 
-## Prerequisites
+## Evaluator Agent (Editor)
 
-- Python **3.10+**
-- An OpenAI API key
-- (Optional) Docker
+Responsibilities:
+- Scores drafts across fixed dimensions
+- Produces structured feedback
+- Never decides acceptance
+- Runs deterministically (temperature = 0)
 
-Set your OpenAI API key as an environment variable:
+Scoring dimensions (0–10):
+1. Hook strength
+2. Factual grounding
+3. Cause → effect clarity
+4. Interpretive judgment
+5. Information density
 
-```bash
-export OPENAI_API_KEY=sk-xxxx
-pip install -r requirements.txt
+The evaluator never sees acceptance thresholds.
+All stopping, rollback, and acceptance logic is enforced in code.
+
+---
+
+## Optimizer Agent (Line Editor)
+
+Responsibilities:
+- Refines drafts using evaluator feedback
+- Improves clarity and density
+- Removes redundancy and abstraction
+- Preserves all factual constraints
+
+Allowed:
+- Merge or remove weak claims
+- Reformat structure if clarity improves
+- Strengthen interpretation without adding facts
+
+Not allowed:
+- Add new facts or metrics
+- Reframe intent
+- Trade one score for another
+
+---
+
+## Scoring, Optimization & Rollback Strategy
+
+Focus factor selection:
+- After first evaluation, the two lowest-scoring dimensions are frozen
+- Only these dimensions may be optimized
+- A focus factor is removed once it reaches ≥ 8
+
+Early stop:
+- If the initial draft scores ≥ 35, optimization is skipped
+
+Regression guards:
+- First optimization regression → stop
+- Later focus regression → rollback and stop
+- Focus flattened + non-focus regression → rollback and stop
+
+Best iteration guarantee:
+- Best iteration tracked after every evaluation
+- Final output always uses best iteration
+- Rollback restores best iteration before summarization
+
+---
+
+## Summarization Semantics
+
+- Summarizes changes between initial and best iteration
+- Excludes exploratory or rolled-back drafts
+- Never re-evaluates or introduces new claims
+
+---
+
+## LangGraph Control Logic
+
+LangGraph is used to:
+- Make state explicit and typed
+- Prevent infinite loops
+- Enforce stop and rollback rules in code
+- Separate decision logic from model behavior
+
+---
+
+## Observability & LangSmith Tracing
+
+Each iteration logs:
+- Per-dimension scores
+- Focus-factor trajectories
+- Score deltas
+- Best-iteration deltas
+- Rollback events
+- Stop reasons
+
+All traces are recorded in LangSmith for inspection.
+
+---
+
+## Model Configuration
+
+Generator:
+- Model: gpt-4.1
+- Temperature: 0.6
+
+Evaluator:
+- Model: gpt-4.1-mini
+- Temperature: 0.0
+
+Optimizer:
+- Model: gpt-4o-mini
+- Temperature: 0.2–0.3
+
+Using separate models prevents self-agreeing loops and improves convergence.
+
+---
+
+## FastAPI Interface
+
+POST /optimize  
+Returns JSON with final post, scores, iteration count, and change summary
+
+POST /optimize/text  
+Returns plain-text, LinkedIn-ready output
+
+---
+
+## Running the Project
+
+Prerequisites:
+- Python 3.10+
+- OpenAI API key
+- Optional Docker
+- Optional LangSmith account
+
+Environment variables:
+
+export OPENAI_API_KEY=sk-xxxx  
+export LANGSMITH_API_KEY=ls-xxxx  
+export LANGSMITH_TRACING=true  
+export LANGSMITH_PROJECT=agentic-linkedin-post-optimizer
+
+Local run:
+
+pip install -r requirements.txt  
 uvicorn app.main:app --reload
 
-docker build -t agentic-linkedin-post-optimizer .
+Docker run:
+
+docker build -t agentic-linkedin-post-optimizer .  
 docker run -p 8000:8000 \
   -e OPENAI_API_KEY=sk-xxxx \
+  -e LANGSMITH_API_KEY=ls-xxxx \
+  -e LANGSMITH_TRACING=true \
+  -e LANGSMITH_PROJECT=agentic-linkedin-post-optimizer \
   agentic-linkedin-post-optimizer
-```
+
+---
+
+## Summary
+
+This repository shows how to build agentic systems that converge predictably, avoid over-optimization, and expose failure modes clearly by enforcing control logic in code rather than relying on prompt tweaks.
+
+
 ## FASTAPI EndPoint
 ![Architecture](docs/s1.png)
 
