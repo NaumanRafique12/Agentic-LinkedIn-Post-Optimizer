@@ -35,7 +35,6 @@ class PostResponse(BaseModel):
     final_post: str
     iterations_used: int
     final_score: int
-    review_decision: str
 
     # NEW: surfaced for transparency
     change_summary: Optional[str]
@@ -46,30 +45,54 @@ class PostResponse(BaseModel):
 def build_initial_state(request: PostRequest) -> Dict[str, Any]:
     """
     Explicitly initialize all fields used by the agent graph.
-    Intent, references, and content will be populated by graph nodes.
+    Control variables live here; agents only modify them.
     """
     return {
+        # -----------------
         # User input
+        # -----------------
         "topic": request.topic,
         "communication_style": request.communication_style,
 
+        # -----------------
         # Control flow
+        # -----------------
         "iteration_count": 0,
         "max_iterations": request.max_iterations,
 
-        # To be filled by graph nodes
+        # -----------------
+        # Agent-populated fields
+        # -----------------
         "intent": None,
         "references": [],
         "draft_post": "",
-        "review_decision": "revise",
         "review_feedback": "",
         "quality_score": 0,
 
-        # Iteration diagnostics
+        # -----------------
+        # Focus control (NEW)
+        # -----------------
+        # Selected once by evaluator at iteration 0
+        "frozen_focus_factors": [],
+
+        # Actively optimized factors (subset of frozen)
+        "active_focus_factors": [],
+
+        # Graduation threshold (system-level config)
+        "focus_graduation_threshold": 8,
+         
+        # best iteration
+        "best_iteration": None,
+
+        # -----------------
+        # Diagnostics
+        # -----------------
         "history": [],
         "review_feedback_history": [],
+        "iteration_focus_history": [],
         "change_summary": None,
     }
+
 
 
 # ---------- ENDPOINTS ----------
@@ -82,14 +105,39 @@ def optimize_linkedin_post(request: PostRequest):
     """
 
     initial_state = build_initial_state(request)
-    final_state = linkedin_post_workflow.invoke(initial_state)
 
+    final_state = linkedin_post_workflow.invoke(
+        initial_state,
+        config={
+            "tags": ["agentic-linkedin-post-optimizer"],
+            "metadata": {
+                "intent": initial_state["intent"],
+                "communication_style": initial_state["communication_style"],
+                "max_iterations": initial_state["max_iterations"],
+            },
+        },
+    )
+
+    # Picking up the best state post and scores
+    best = final_state.get("best_iteration")
+
+    final_post = (
+        best["draft_post"]
+        if best is not None
+        else final_state["draft_post"]
+    )
+
+    final_score = (
+        best["quality_score"]
+        if best is not None
+        else final_state.get("quality_score", 0)
+    )
     return {
-        "final_post": final_state["draft_post"],
+        "final_post": final_post,
         "iterations_used": final_state["iteration_count"],
-        "final_score": final_state.get("quality_score", 0),
-        "review_decision": final_state.get("review_decision", "unknown"),
-        "change_summary": final_state.get("change_summary")
+        "final_score": final_score,
+        "review_decision": "accept" if final_score >= 39 else "revise",
+        "change_summary": final_state.get("change_summary"),
     }
 
 
@@ -102,5 +150,13 @@ def optimize_linkedin_post_text(request: PostRequest):
 
     initial_state = build_initial_state(request)
     final_state = linkedin_post_workflow.invoke(initial_state)
+    # Picking up the best state post and scores
+    best = final_state.get("best_iteration")
 
-    return final_state["draft_post"]
+    final_post = (
+        best["draft_post"]
+        if best is not None
+        else final_state["draft_post"]
+    )
+
+    return final_post

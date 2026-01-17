@@ -20,8 +20,8 @@ evaluator_llm = ChatOpenAI(
 
 # Line editor — surgical rewrites only
 optimizer_llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0.2,
+    model="gpt-4.1-mini",
+    temperature=0.1,
 )
 
 # NEW: Change Summary / Iteration Diff LLM

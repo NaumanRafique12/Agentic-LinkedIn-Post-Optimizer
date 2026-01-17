@@ -7,14 +7,14 @@ from models.llm_config import change_summary_llm
 class ChangeSummary(BaseModel):
     summary: str
 
-
 structured_summary_llm = change_summary_llm.with_structured_output(ChangeSummary)
 
 
 def summarize_changes(state: LinkedInPostState) -> LinkedInPostState:
-    history = state.get("review_feedback_history",[])
+    best = state.get("best_iteration")
+    history = state.get("review_feedback_history", [])
 
-    if len(history) < 3:
+    if not best or len(history) < 1:
         return {"change_summary": None}
 
     messages = [
@@ -31,11 +31,11 @@ def summarize_changes(state: LinkedInPostState) -> LinkedInPostState:
         Initial feedback:
         {history[0]}
 
-        Final feedback:
-        {history[-1]}
+        Final feedback (best iteration):
+        {best['review_feedback']}
 
-        Focus dimensions:
-        {state["focus_factors"]}
+        Active Focus dimensions:
+        {best["frozen_focus_factors"]}
 
         Summarize the changes clearly for a user.
         """
