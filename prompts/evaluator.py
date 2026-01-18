@@ -156,8 +156,8 @@ def evaluate_linkedin_post(state: LinkedInPostState) -> LinkedInPostState:
         best_iteration_index = (
         best["iteration_count"] if best else None
         )
-        
-        
+
+
         log_iteration_focus({
             "iteration": state["iteration_count"],
             "best_iteration_index": best_iteration_index,
@@ -176,7 +176,7 @@ def evaluate_linkedin_post(state: LinkedInPostState) -> LinkedInPostState:
             "communication_style": state["communication_style"],
         })
 
-    
+
     # Logging best iteration scores
     current_iteration_snapshot = {
     "draft_post": state["draft_post"],

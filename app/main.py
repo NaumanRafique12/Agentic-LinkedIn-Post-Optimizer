@@ -80,7 +80,7 @@ def build_initial_state(request: PostRequest) -> Dict[str, Any]:
 
         # Graduation threshold (system-level config)
         "focus_graduation_threshold": 8,
-         
+
         # best iteration
         "best_iteration": None,
 
