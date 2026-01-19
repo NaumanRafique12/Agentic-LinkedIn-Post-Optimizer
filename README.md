@@ -66,6 +66,8 @@ agentic-linkedin-post-optimizer/
 ├── graph/
 │   ├── state.py             # Typed agent state + best-iteration tracking
 │   └── workflow.py          # LangGraph control flow & stop logic
+|   └── observability.py     # Tracks LLM Cost per Agent/Node
+|   └── costs.py             # Tracks LLM Calls along with Estimated Costs
 │
 ├── prompts/
 │   ├── intent_classifier.py
