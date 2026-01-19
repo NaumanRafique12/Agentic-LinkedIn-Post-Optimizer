@@ -67,3 +67,6 @@ class LinkedInPostState(TypedDict):
 
     # User-facing explanation of what changed (computed at end)
     change_summary: Optional[str]
+    
+    # Cost Metrics per run
+    run_metrics: Dict[str, Any]

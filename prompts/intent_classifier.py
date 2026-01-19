@@ -1,7 +1,6 @@
 from typing import Literal
-
+from graph.costs import charge_cost
 from pydantic import BaseModel, Field
-
 from models.llm_config import intent_classifier_llm
 from graph.state import LinkedInPostState
 
@@ -43,7 +42,8 @@ def intent_classifier(state: LinkedInPostState) -> LinkedInPostState:
 
     Return only the structured output.
     """
-
+    
+    charge_cost(state, "intent_classifier")
     result: IntentOutput = structured_llm.invoke(prompt)
 
     # Update state immutably

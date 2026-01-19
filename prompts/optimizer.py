@@ -1,6 +1,7 @@
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import LinkedInPostState
 from models.llm_config import optimizer_llm
+from graph.costs import charge_cost, ESTIMATED_TOKEN_COSTS
 
 
 PROOF_OF_WORK_SYSTEM = (
@@ -75,8 +76,15 @@ Return LinkedIn-ready text only.
         ),
     ]
 
+    
+    state["run_metrics"]["optimizer_runs"] += 1
+    if state['run_metrics']['token_budget_remaining'] < ESTIMATED_TOKEN_COSTS["optimizer"]:
+      state['run_metrics']['stop_reason'] = 'token_budget_exceeded'
+      return state
+    
+    charge_cost(state, 'optimizer')
     response = optimizer_llm.invoke(messages).content
-
+    
     return {
         "draft_post": response,
         "iteration_count": state["iteration_count"] + 1,

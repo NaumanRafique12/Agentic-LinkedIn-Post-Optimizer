@@ -4,6 +4,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import LinkedInPostState
 from models.llm_config import evaluator_llm
 from langsmith import traceable
+from graph.costs import charge_cost
 
 @traceable(name='iteration_focus_snapshot')
 def log_iteration_focus(snapshot: dict):
@@ -79,7 +80,12 @@ def evaluate_linkedin_post(state: LinkedInPostState) -> LinkedInPostState:
     ,
     ]
 
+    
+    state["run_metrics"]["iterations"] += 1
+    charge_cost(state, "evaluator")
     response = structured_evaluator.invoke(messages)
+    if state['iteration_count'] == 0:
+      state['run_metrics']['initial_score'] = response.total_score
 
     scores: Dict[str, int] = {
         "hook_strength": response.hook_strength,

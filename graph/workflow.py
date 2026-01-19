@@ -90,6 +90,8 @@ def rollback_to_best(state: LinkedInPostState) -> LinkedInPostState:
     best = state.get("best_iteration")
     if not best:
         return {}
+    
+    state["run_metrics"]["rollbacks"] += 1
 
     return {
         "draft_post": best["draft_post"],
@@ -105,16 +107,19 @@ def should_continue(state: LinkedInPostState):
 
     # 0. Early stop: strong generator output
     if state["iteration_count"] == 0 and state["quality_score"] >= 40:
+        state["run_metrics"]["stop_reason"] = "Strong_initial_draft"
         return "summarize_changes"
 
     # 1. First-iteration regression guard
     if state["iteration_count"] == 1:
         if first_iteration_focus_regressed(state):
+            state["run_metrics"]["stop_reason"] = "Active_Focus_Regressed_First_Iteration"
             return "summarize_changes"
 
     # 2. Later regression guard with rollback
     if state["iteration_count"] >= 2:
         if active_focus_regressed(state):
+            state["run_metrics"]["stop_reason"] = "Active_Focus_Regressed_At/After_2nd_Iteration"
             # Rollback to best iteration
             return "rollback"
 
@@ -122,15 +127,21 @@ def should_continue(state: LinkedInPostState):
     if state["iteration_count"] >= 2:
         if active_focus_flattened(state): # Returns True if Active Focus Flattened
             if non_focus_regressed(state): # Returns True if Non Focus Factor Degraded
+                state["run_metrics"]["stop_reason"] = "Non_Focus_Regressed"
                 return "rollback"
 
 
     # 1. Stop if all focus factors have graduated
     if not state.get("active_focus_factors"):
+        state["run_metrics"]["stop_reason"] = "focus_graduated"
         return "summarize_changes"
 
     # 3. Stop if max iterations reached
     if state["iteration_count"] >= state["max_iterations"]:
+        state["run_metrics"]["stop_reason"] = "max_iterations_reached"
+        return "summarize_changes"
+
+    if state["run_metrics"]["stop_reason"] == "token_budget_exceeded":
         return "summarize_changes"
 
     # Otherwise, continue optimizing

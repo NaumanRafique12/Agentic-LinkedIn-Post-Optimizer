@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from langchain_core.messages import SystemMessage, HumanMessage
 from graph.state import LinkedInPostState
 from models.llm_config import change_summary_llm
+from graph.costs import charge_cost
 
 
 class ChangeSummary(BaseModel):
@@ -13,6 +14,11 @@ structured_summary_llm = change_summary_llm.with_structured_output(ChangeSummary
 def summarize_changes(state: LinkedInPostState) -> LinkedInPostState:
     best = state.get("best_iteration")
     history = state.get("review_feedback_history", [])
+
+    state["run_metrics"]["best_score"] = (
+    best["quality_score"] if best else state["quality_score"]
+    )
+    state["run_metrics"]["final_score"] = state["run_metrics"]["best_score"]
 
     if not best or len(history) < 1:
         return {"change_summary": None}
@@ -41,7 +47,7 @@ def summarize_changes(state: LinkedInPostState) -> LinkedInPostState:
         """
                 ),
     ]
-
+    charge_cost(state, "summarizer")
     response = structured_summary_llm.invoke(messages)
 
     return {"change_summary": response.summary}

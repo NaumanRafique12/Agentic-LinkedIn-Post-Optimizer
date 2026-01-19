@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from fastapi.responses import PlainTextResponse
 from typing import Dict, Any, Literal, Optional
 from graph.workflow import linkedin_post_workflow
+from graph.observability import log_run_summary,run_workflow
 
 
 app = FastAPI(
@@ -91,6 +92,41 @@ def build_initial_state(request: PostRequest) -> Dict[str, Any]:
         "review_feedback_history": [],
         "iteration_focus_history": [],
         "change_summary": None,
+        
+        # Cost Tracking
+        "run_metrics": {
+            # LLM usage
+            "llm_calls": {
+                "intent_classifier": 0,
+                "generator": 0,
+                "evaluator": 0,
+                "optimizer": 0,
+                "summarizer": 0,
+            },
+
+            # Iteration behavior
+            "iterations": 0,
+            "optimizer_runs": 0,
+            "rollbacks": 0,
+
+            # Quality
+            "initial_score": None,
+            "best_score": None,
+            "final_score": None,
+
+            # Cost control
+            "token_budget_remaining": 40000,
+            "estimated_tokens_used": 0,
+
+            # Termination
+            "stop_reason": None,
+
+            # Actual Cost
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "total_cost_usd": 0,
+        },
     }
 
 
@@ -105,18 +141,11 @@ def optimize_linkedin_post(request: PostRequest):
     """
 
     initial_state = build_initial_state(request)
+    config = {"tags": ["agentic-linkedin-post-optimizer"]}
+    final_state = run_workflow(linkedin_post_workflow,initial_state,config)
 
-    final_state = linkedin_post_workflow.invoke(
-        initial_state,
-        config={
-            "tags": ["agentic-linkedin-post-optimizer"],
-            "metadata": {
-                "intent": initial_state["intent"],
-                "communication_style": initial_state["communication_style"],
-                "max_iterations": initial_state["max_iterations"],
-            },
-        },
-    )
+    # Logging agent run summary
+    log_run_summary(final_state["run_metrics"])
 
     # Picking up the best state post and scores
     best = final_state.get("best_iteration")
@@ -136,7 +165,7 @@ def optimize_linkedin_post(request: PostRequest):
         "final_post": final_post,
         "iterations_used": final_state["iteration_count"],
         "final_score": final_score,
-        "review_decision": "accept" if final_score >= 39 else "revise",
+        "review_decision": "accept" if final_score >= 40 else "revise",
         "change_summary": final_state.get("change_summary"),
     }
 
@@ -149,7 +178,13 @@ def optimize_linkedin_post_text(request: PostRequest):
     """
 
     initial_state = build_initial_state(request)
-    final_state = linkedin_post_workflow.invoke(initial_state)
+    config = {"tags": ["agentic-linkedin-post-optimizer"]}
+    final_state = run_workflow(linkedin_post_workflow,initial_state,config)
+    
+
+    # Logging agent run summary
+    log_run_summary(final_state["run_metrics"])
+
     # Picking up the best state post and scores
     best = final_state.get("best_iteration")
 
