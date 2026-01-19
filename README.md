@@ -76,7 +76,12 @@ agentic-linkedin-post-optimizer/
 │
 ├── models/
 │   └── llm_config.py        # Model & temperature configuration
-│
+|
+│── tests/
+│   ├── global_test.py                # Test for best iteration output
+│   ├── later_regress_test.py         # Test for later iteration regression
+│   ├── no_optimizer_test.py          # Tests for initial score 
+│   
 ├── Dockerfile
 ├── requirements.txt
 ```
