@@ -1,10 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from fastapi.responses import PlainTextResponse
 from typing import Dict, Any, Literal, Optional
 from graph.workflow import linkedin_post_workflow
 from graph.observability import log_run_summary,run_workflow
-
 
 app = FastAPI(
     title="Agentic LinkedIn Post Optimizer",
