@@ -314,7 +314,7 @@ Local run:
 
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-http://localhost:8000
+http://localhost:8000/docs
 
 Docker run:
 
@@ -325,6 +325,101 @@ docker run -p 8000:8000 \
   -e LANGSMITH_TRACING=true \
   -e LANGSMITH_PROJECT=agentic-linkedin-post-optimizer \
   agentic-linkedin-post-optimizer
+
+Azure Login:
+
+az login
+az account show
+
+Create Resource Group:
+
+az group create --name rg-agentic-linkedin --location eastus
+
+Create Azure Container Registry (ACR):
+
+az provider register --namespace Microsoft.ContainerRegistry
+az acr create \
+  --resource-group rg-agentic-linkedin \
+  --name agenticacr001 \
+  --sku Basic \
+  --admin-enabled true
+
+Push Docker Image to ACR:
+
+az acr login --name agenticacr001
+docker tag agentic-linkedin-post-optimizer \
+  agenticacr001.azurecr.io/agentic-linkedin-post-optimizer:v1
+docker push agenticacr001.azurecr.io/agentic-linkedin-post-optimizer:v1
+
+Register Azure Providers (One-Time):
+
+az provider register --namespace Microsoft.App
+az provider register --namespace Microsoft.Web
+az provider register --namespace Microsoft.OperationalInsights
+
+Create Container Apps Environment:
+
+az containerapp env create \
+  --name agentic-env \
+  --resource-group rg-agentic-linkedin \
+  --location eastus
+
+Deploy Container App:
+
+az containerapp create \
+  --name agentic-linkedin-app \
+  --resource-group rg-agentic-linkedin \
+  --environment agentic-env \
+  --image agenticacr001.azurecr.io/agentic-linkedin-post-optimizer:v1 \
+  --registry-server agenticacr001.azurecr.io \
+  --target-port 8000 \
+  --ingress external \
+  --min-replicas 0 \
+  --max-replicas 1
+
+Get Public URL:
+
+az containerapp show \
+  --name agentic-linkedin-app \
+  --resource-group rg-agentic-linkedin \
+  --query "properties.configuration.ingress.fqdn" \
+  --output tsv
+
+Set Environment Variables (Azure Runtime):
+
+az containerapp update \
+  --name agentic-linkedin-app \
+  --resource-group rg-agentic-linkedin \
+  --set-env-vars \
+    OPENAI_API_KEY=sk-xxxx \
+    LANGCHAIN_API_KEY=ls-xxxx \
+    LANGCHAIN_TRACING_V2=true \
+    LANGCHAIN_PROJECT=agentic-linkedin-post-optimizer
+
+Stop Application (No Compute Cost):
+
+az containerapp ingress disable \
+  --name agentic-linkedin-app \
+  --resource-group rg-agentic-linkedin
+
+Restart Application:
+
+az containerapp ingress enable \
+  --name agentic-linkedin-app \
+  --resource-group rg-agentic-linkedin \
+  --type external \
+  --target-port 8000
+
+Notes
+
+1) Secrets are injected at runtime via Azure Container Apps.
+
+2) No secrets are stored in the image or repository.
+
+3) Scale-to-zero ensures minimal cost when idle.
+
+4) Any code change requires rebuilding and pushing a new Docker image.
+
 ```
 ---
 
@@ -343,8 +438,3 @@ This repository shows how to build agentic systems that converge predictably, av
 
 ## ExampleOutput(Story Driven)
 ![Architecture](docs/s4.png)
-
-
-
-
-
